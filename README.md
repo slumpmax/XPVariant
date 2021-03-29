@@ -1,4 +1,4 @@
-# XPVAR
+# XPVariant
 
 ## Easy to use variable supported JSON format for Delphi
 * Simple declare and assign any value. (included associated array)
