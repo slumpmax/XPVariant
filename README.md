@@ -4,7 +4,7 @@
 * Simple declare and assign any value. (included associated array)
 * Convert to JSON text and from JSON text. (JSON and JSONPretty properties)
 
-# Highlights
+## Highlights
 * uses XPVariant and declare variable to XPVar type.
 * simple assign any value to variable. (Integer, float, double, boolean, string)
 * use XPArray to assign array values.
