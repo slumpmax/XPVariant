@@ -5,16 +5,16 @@
 * Convert to JSON text and from JSON text. (JSON and JSONPretty properties)
 
 ## Highlights
-* uses XPVariant and declare variable to XPVar type.
+* uses **XPVariant** and declare variable to **XPVar** type.
 * simple assign any value to variable. (Integer, float, double, boolean, string)
-* use XPArray to assign array values.
-* use XPKey to assign key/value array members.
+* use **XPArray** to assign array values.
+* use **XPKey** to assign key/value array members.
 * use simple operator to calculate between XPvar and other value types. (+ - * / etc.)
-* use JSON or JSONPretty to get or set JSON format text.
-* use AsInt or AsInteger to forced get or set Integer value.
-* use AsFloat to forced get or set Double value.
-* use AsBoolor AsBoolean to forced get or set Booleanvalue.
-* use AsStr or AsString to forced get or set String value.
+* use **JSON** or **JSONPretty** to get or set JSON format text.
+* use **AsInt** or **AsInteger** to forced get or set Integer value.
+* use **AsFloat** to forced get or set Double value.
+* use **AsBool** or **AsBoolean** to forced get or set Boolean value.
+* use **AsStr** or **AsString** to forced get or set String value.
 
 ```Delphi
 var
@@ -42,7 +42,7 @@ begin
     ])),
     'no key'
   ]);
-  k10.JSON := Memo2.JSON;
+  k10.JSON := Memo2.Text;
   Memo1.Lines.Add(Format('k0: %s', [k0.JSON]));
   Memo1.Lines.Add(Format('k1: %s', [k1.JSON]));
   Memo1.Lines.Add(Format('k2: %s', [k2.JSON]));
