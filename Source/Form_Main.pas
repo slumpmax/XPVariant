@@ -28,10 +28,12 @@ implementation
 
 procedure TFormMain.Button1Click(Sender: TObject);
 var
-  k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10: XPVar;
+  k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11: XPVar;
 begin
   k1 := 56;
   k2 := 78.901 - k1;
+  k3 := k1;
+  k1 := 23;
   k1[7] := 66;
   k3[5] := 'Delphi' + k2;
   k4['ID'] := nil;
@@ -40,10 +42,15 @@ begin
   k6['7'] := 'A';
   k6['9'] := 'B';
   k7 := k6;
-  k7['flag'] := 'end';
+  k7['flag'] := 'ready';
+  k7['data'] := nil;
+  k7['data'][1] := 'start';
+  k7['data'][2][3][4] := 'end';
   k8.JSON := k6.JSON;
   k8['members'] := XPArray(['continue', 123]);
-  k9 := XPArray([
+  k9 := k7['data'][2];
+//  k9[9] := 5.5;
+  k10 := XPArray([
     XPKey('ID', 2),
     XPKey('Data', XPArray([
       XPKey('Name', 'Tom'),
@@ -52,7 +59,7 @@ begin
     ])),
     'no key'
   ]);
-  k10.JSON := Memo2.Text;
+  k11.JSON := Memo2.Text;
   Memo1.Lines.Add(Format('k0: %s', [k0.JSON]));
   Memo1.Lines.Add(Format('k1: %s', [k1.JSON]));
   Memo1.Lines.Add(Format('k2: %s', [k2.JSON]));
@@ -64,6 +71,7 @@ begin
   Memo1.Lines.Add(Format('k8: %s', [k8.JSON]));
   Memo1.Lines.Add(Format('k9: %s', [k9.JSONPretty]));
   Memo1.Lines.Add(Format('k10: %s', [k10.JSONPretty]));
+//  Memo1.Lines.Add(Format('k11: %s', [k11.JSONPretty]));
 end;
 
 end.
