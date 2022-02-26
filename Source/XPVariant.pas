@@ -14,8 +14,17 @@ type
     XP_FLOAT      = 4,
     XP_STRING     = 5,
     XP_ARRAY      = 6,
-    XP_KEY        = 7
+    XP_KEY        = 7,
+    XP_POINTER    = 8
   );
+  TXPVarKey = class;
+  TXPVarArray = class;
+  TXPVarRef = class;
+  PXPVar = ^XPVar;
+  PXPVarItem = ^XPVarItem;
+
+  TXPVarNull = class(TInterfacedObject, IInterface)
+  end;
 
   TXPVarInteger = class(TInterfacedObject, IInterface)
   public
@@ -41,20 +50,60 @@ type
     constructor Create(AValue: string = '');
   end;
 
-  TXPVarKey = class;
-  TXPVarArray = class;
+  TXPVarPointer = class(TInterfacedObject, IInterface)
+  public
+    Value: Pointer;
+    constructor Create(AValue: Pointer = nil);
+  end;
+
+  XPVarRef = record
+  private
+    FVar: TXPVarRef;
+    function GetValueOfInt(AKey: Integer): XPVarRef;
+    procedure SetValueOfInt(AKey: Integer; AValue: XPVarRef);
+    function GetValueOfBool(AKey: Boolean): XPVarRef;
+    procedure SetValueOfBool(AKey: Boolean; AValue: XPVarRef);
+    function GetValues(AKey: string): XPVarRef;
+    procedure SetValues(AKey: string; AValue: XPVarRef);
+    function GetValue: PXPVar;
+    procedure SetValue(AValue: PXPVar);
+    function GetRef: PXPVar;
+    procedure SetRef(AValue: PXPVar);
+  public
+    procedure Clear;
+
+    class operator Implicit(AValue: Boolean): XPVarRef;
+    class operator Implicit(AValue: Integer): XPVarRef;
+    class operator Implicit(AValue: Double): XPVarRef;
+    class operator Implicit(AValue: string): XPVarRef;
+    class operator Implicit(AValue: TXPVarKey): XPVarRef;
+    class operator Implicit(AValue: TXPVarArray): XPVarRef;
+    class operator Implicit(AValue: Pointer): XPVarRef;
+
+    class operator Negative(AValue: XPVarRef): XPVarRef;
+
+    class operator Add(A: XPVarRef; B: Double): XPVarRef;
+    class operator Subtract(A: XPVarRef; B: Double): XPVarRef;
+    class operator Subtract(A: Double; B: XPVarRef): XPVarRef;
+
+    property Ref: PXPVar read GetRef write SetRef;
+    property Value: PXPVar read GetValue write SetValue;
+    property Values[AKey: Integer]: XPVarRef read GetValueOfInt write SetValueOfInt; default;
+    property Values[AKey: Boolean]: XPVarRef read GetValueOfBool write SetValueOfBool; default;
+    property Values[AKey: string]: XPVarRef read GetValues write SetValues; default;
+  end;
 
   XPVar = record
   private
     FInterface: IInterface;
-    FType: TXPVarType;
+    function GetType: TXPVarType;
     procedure SetType(AType: TXPVarType);
-    function GetValueOfInt(AKey: Integer): XPVar;
-    procedure SetValueOfInt(AKey: Integer; AValue: XPVar);
-    function GetValueOfBool(AKey: Boolean): XPVar;
-    procedure SetValueOfBool(AKey: Boolean; AValue: XPVar);
-    function GetValues(AKey: string): XPVar;
-    procedure SetValues(AKey: string; AValue: XPVar);
+    function GetValueOfInt(AKey: Integer): XPVarRef;
+    procedure SetValueOfInt(AKey: Integer; AValue: XPVarRef);
+    function GetValueOfBool(AKey: Boolean): XPVarRef;
+    procedure SetValueOfBool(AKey: Boolean; AValue: XPVarRef);
+    function GetValues(AKey: string): XPVarRef;
+    procedure SetValues(AKey: string; AValue: XPVarRef);
     function GetJSON: string;
     procedure SetJSON(AValue: string);
     function GetJSONPretty: string;
@@ -64,34 +113,42 @@ type
     function GetAsString: string;
     function GetAsArray: TXPVarArray;
     function GetAsKey: TXPVarKey;
+    function GetAsPointer: Pointer;
     procedure SetAsInteger(AValue: Integer);
     procedure SetAsBoolean(AValue: Boolean);
     procedure SetAsFloat(AValue: Double);
     procedure SetAsString(AValue: string);
+    procedure SetAsArray(AValue: TXPVarArray);
     function EncodeText(AIndent: Integer = -1): string;
     procedure SetAsKey(AValue: TXPVarKey);
+    procedure SetAsPointer(AValue: Pointer);
+    function RemoveDummy(): Boolean;
   public
     procedure Clear;
     function EscapeString(AString: string): string;
 
-    class operator Implicit(AValue: Pointer): XPVar;
     class operator Implicit(AValue: Boolean): XPVar;
     class operator Implicit(AValue: Integer): XPVar;
     class operator Implicit(AValue: Double): XPVar;
     class operator Implicit(AValue: string): XPVar;
     class operator Implicit(AValue: TXPVarKey): XPVar;
     class operator Implicit(AValue: TXPVarArray): XPVar;
+    class operator Implicit(AValue: Pointer): XPVar;
+    class operator Implicit(AValue: XPVarRef): XPVar;
+    class operator Implicit(AValue: PXPVar): XPVar;
 
     class operator Implicit(AValue: XPVar): Boolean;
     class operator Implicit(AValue: XPVar): Integer;
     class operator Implicit(AValue: XPVar): Double;
     class operator Implicit(AValue: XPVar): string;
+    class operator Implicit(AValue: XPVar): XPVarRef;
 
     class operator Negative(AValue: XPVar): XPVar;
 
-    class operator Add(A: XPVar; B: Integer): XPVar;
-    class operator Subtract(A: XPVar; B: Integer): XPVar;
-    class operator Subtract(A: Integer; B: XPVar): XPVar;
+    class operator Add(A: XPVar; B: Double): XPVar;
+    class operator Add(A: XPVar; B: XPVarRef): XPVarRef;
+    class operator Subtract(A: XPVar; B: Double): XPVar;
+    class operator Subtract(A: Double; B: XPVar): XPVar;
 
     property AsInteger: Integer read GetAsInteger write SetAsInteger;
     property AsInt: Integer read GetAsInteger write SetAsInteger;
@@ -104,7 +161,9 @@ type
     property AsString: string read GetAsString write SetAsString;
     property AsStr: string read GetAsString write SetAsString;
 
-    property AsArray: TXPVarArray read GetAsArray;
+    property AsPointer: Pointer read GetAsPointer write SetAsPointer;
+
+    property AsArray: TXPVarArray read GetAsArray write SetAsArray;
     property AsKey: TXPVarKey read GetAsKey write SetAsKey;
 
     property JSON: string read GetJSON write SetJSON;
@@ -112,28 +171,25 @@ type
     property Text: string read GetJSON write SetJSON;
     property TextPretty: string read GetJSONPretty write SetJSON;
 
-    property ValueType: TXPVarType read FType write SetType;
-    property Values[AKey: Integer]: XPVar read GetValueOfInt write SetValueOfInt; default;
-    property Values[AKey: Boolean]: XPVar read GetValueOfBool write SetValueOfBool; default;
-    property Values[AKey: string]: XPVar read GetValues write SetValues; default;
+    property ValueType: TXPVarType read GetType write SetType;
+    property Values[AKey: Integer]: XPVarRef read GetValueOfInt write SetValueOfInt; default;
+    property Values[AKey: Boolean]: XPVarRef read GetValueOfBool write SetValueOfBool; default;
+    property Values[AKey: string]: XPVarRef read GetValues write SetValues; default;
   end;
 
-//  IXPVarKey = interface
-//    function GetKey: string;
-//    function GetValue: XPVar;
-//    function SetValue(AValue: XPVar);
-//    property Key: string read GetKey;
-//    property Value: XPVar read GetValue write SetValue;
-//  end;
+  TXPVarRef = class(TInterfacedObject, IInterface)
+  private
+    FRef: PXPVar;
+    FValue: XPVar;
+  public
+    constructor Create;
+  end;
 
   TXPVarKey = class(TInterfacedObject, IInterface)
   public
     Key: string;
     Value: XPVar;
     constructor Create; overload;
-    constructor Create(AKey: string; AValue: XPVar); overload;
-    constructor Create(AKey: Integer; AValue: XPVar); overload;
-    constructor Create(AKey: Boolean; AValue: XPVar); overload;
   end;
 
   XPVarItem = record
@@ -155,35 +211,20 @@ type
   end;
   TXPJson = XPVar;
 
-//  IXPVarArray = interface
-//    function GetValues(AKey: string): XPVar;
-//    procedure SetValues(AKey: string; AValue: XPVar);
-//    function GetAssociated: Boolean;
-//    procedure SetAssociated(AValue: Boolean);
-//    function GetKeys(AIndex: Integer): string;
-//    function GetItems(AIndex: Integer): XPVarItem;
-//    procedure Clear;
-//    function Count: Integer;
-//    function IndexOf(AKey: string; AStart: Integer = -1; AStop: Integer = -1): Integer;
-//    procedure Assign(AArray: TXPVarArray);
-//    function Push(AValue: XPVar): Integer;
-//    property Associated: Boolean read GetAssociated write SetAssociated;
-//    property Keys[AIndex: Integer]: string read GetKeys;
-//    property Items[AIndex: Integer]: XPVarItem read GetItems;
-//    property Values[AKey: string]: XPVar read GetValues write SetValues; default;
-//  end;
-
   TXPVarArray = class(TInterfacedObject, IInterface)
   private
+    FRef: PXPVar;
     FIndex: Integer;
     FAssociated: Boolean;
     FItems: array of XPVarItem;
-    function GetValues(AKey: string): XPVar;
-    procedure SetValues(AKey: string; AValue: XPVar);
+    function GetValues(AKey: string): XPVarRef;
+    procedure SetValues(AKey: string; AValue: XPVarRef);
+    function GetValueRefs(AKey: string): PXPVar;
     function GetAssociated: Boolean;
     procedure SetAssociated(AValue: Boolean);
     function GetKeys(AIndex: Integer): string;
     function GetItems(AIndex: Integer): XPVarItem;
+    function RemoveDummy(): Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -195,7 +236,8 @@ type
     property Associated: Boolean read GetAssociated write SetAssociated;
     property Keys[AIndex: Integer]: string read GetKeys;
     property Items[AIndex: Integer]: XPVarItem read GetItems;
-    property Values[AKey: string]: XPVar read GetValues write SetValues; default;
+    property ValueRefs[AKey: string]: PXPVar read GetValueRefs;
+    property Values[AKey: string]: XPVarRef read GetValues write SetValues; default;
   end;
 
 function JsonArrayOf(AValues: array of XPVar): XPVar;
@@ -243,34 +285,45 @@ end;
 
 { XPVar }
 
+procedure XPVar.SetAsArray(AValue: TXPVarArray);
+begin
+  SetType(XP_ARRAY);
+  TXPVarArray(FInterface).Assign(AValue);
+end;
+
 procedure XPVar.SetAsBoolean(AValue: Boolean);
 begin
   FInterface := TXPVarBoolean.Create(AValue);
-  FType := XP_BOOLEAN;
 end;
 
 procedure XPVar.SetAsFloat(AValue: Double);
 begin
   FInterface := TXPVarFloat.Create(AValue);
-  FType := XP_FLOAT;
 end;
 
 procedure XPVar.SetAsInteger(AValue: Integer);
 begin
   FInterface := TXPVarInteger.Create(AValue);
-  FType := XP_INTEGER;
 end;
 
 procedure XPVar.SetAsKey(AValue: TXPVarKey);
 begin
-  FInterface := TXPVarKey.Create(0, AValue);
-  FType := XP_KEY;
+  SetType(XP_KEY);
+  with TXPVarKey(FInterface) do
+  begin
+    Key := AValue.Key;
+    Value := AValue.Value;
+  end;
+end;
+
+procedure XPVar.SetAsPointer(AValue: Pointer);
+begin
+  FInterface := TXPVarPointer.Create(AValue);
 end;
 
 procedure XPVar.SetAsString(AValue: string);
 begin
   FInterface := TXPVarString.Create(AValue);
-  FType := XP_STRING;
 end;
 
 procedure XPVar.SetJSON(AValue: string);
@@ -284,40 +337,42 @@ end;
 procedure XPVar.SetType(AType: TXPVarType);
 begin
   case AType of
+    XP_NULL     : FInterface := TXPVarNull.Create;
     XP_INTEGER  : FInterface := TXPVarInteger.Create;
     XP_BOOLEAN  : FInterface := TXPVarBoolean.Create;
     XP_FLOAT    : FInterface := TXPVarFloat.Create;
     XP_STRING   : FInterface := TXPVarString.Create;
     XP_ARRAY    : FInterface := TXPVarArray.Create;
     XP_KEY      : FInterface := TXPVarKey.Create;
+    XP_POINTER  : FInterface := TXPVarPointer.Create;
   else
     FInterface := nil;
   end;
-  FType := AType;
 end;
 
-procedure XPVar.SetValueOfBool(AKey: Boolean; AValue: XPVar);
+procedure XPVar.SetValueOfBool(AKey: Boolean; AValue: XPVarRef);
 begin
   SetValues(IfThen(AKey, '1', '0'), AValue);
 end;
 
-procedure XPVar.SetValueOfInt(AKey: Integer; AValue: XPVar);
+procedure XPVar.SetValueOfInt(AKey: Integer; AValue: XPVarRef);
 begin
   SetValues(IntToStr(AKey), AValue);
 end;
 
-procedure XPVar.SetValues(AKey: string; AValue: XPVar);
+procedure XPVar.SetValues(AKey: string; AValue: XPVarRef);
 begin
-  AsArray[AKey] := AValue;
+  AsArray[AKey] := AValue
 end;
 
-class operator XPVar.Subtract(A: Integer; B: XPVar): XPVar;
+class operator XPVar.Subtract(A: Double; B: XPVar): XPVar;
 begin
-  case B.FType of
-    XP_INTEGER: Result := A - B.AsInteger;
-    XP_BOOLEAN: Result := A - IfThen(B.AsBoolean, 1, 0);
-    XP_FLOAT: Result := Double(A) - B.AsFloat;
-    XP_STRING: Result := IntToStr(A) + B.AsString;
+  case B.ValueType of
+    XP_INTEGER: Result := A - B.AsFloat;
+    XP_BOOLEAN: Result := A - IfThen(B.AsBoolean, 1.0, 0.0);
+    XP_FLOAT: Result := A - B.AsFloat;
+    XP_STRING: Result := FloatToStr(A) + B.AsString;
+    XP_POINTER: Result := A - Integer(B.AsPointer);
     XP_ARRAY:
     begin
       Result := A;
@@ -328,13 +383,14 @@ begin
   end;
 end;
 
-class operator XPVar.Subtract(A: XPVar; B: Integer): XPVar;
+class operator XPVar.Subtract(A: XPVar; B: Double): XPVar;
 begin
-  case A.FType of
-    XP_INTEGER: Result := A.AsInteger - B;
+  case A.ValueType of
+    XP_INTEGER: Result := A.AsFloat - B;
     XP_BOOLEAN: Result := IfThen(A.AsBoolean, 1, 0) - B;
-    XP_FLOAT: Result := A.AsFloat - Double(B);
-    XP_STRING: Result := A.AsString + IntToStr(B);
+    XP_FLOAT: Result := A.AsFloat - B;
+    XP_STRING: Result := A.AsString + FloatToStr(B);
+    XP_POINTER: Result := Integer(A.AsPointer) - B;
     XP_ARRAY:
     begin
       Result := A;
@@ -345,21 +401,28 @@ begin
   end;
 end;
 
-class operator XPVar.Add(A: XPVar; B: Integer): XPVar;
+class operator XPVar.Add(A: XPVar; B: Double): XPVar;
 begin
-  case A.FType of
-    XP_INTEGER: Result.AsInteger := A.AsInteger + B;
-    XP_BOOLEAN: Result.AsInteger := A.AsInteger + B;
+  case A.ValueType of
+    XP_INTEGER: Result.AsFloat := A.AsInteger + B;
+    XP_BOOLEAN: Result.AsFloat := A.AsInteger + B;
     XP_FLOAT: Result.AsFloat := A.AsFloat + B;
-    XP_STRING: Result.AsString := A.AsString + IntToStr(B);
+    XP_STRING: Result.AsString := A.AsString + FloatToStr(B);
+    XP_POINTER: Result := Integer(A.AsPointer) + B;
     XP_ARRAY:
     begin
       Result := A.AsArray;
       Result.AsArray.Push(B);
     end
   else
-    Result.AsInteger := B;
+    Result.AsFloat := B;
   end;
+end;
+
+class operator XPVar.Add(A: XPVar; B: XPVarRef): XPVarRef;
+begin
+  Result.FVar.FValue := A + B.FVar.FValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
 end;
 
 procedure XPVar.Clear;
@@ -370,9 +433,11 @@ end;
 function XPVar.EncodeText(AIndent: Integer): string;
 var
   arr: TXPVarArray;
+  vk: TXPVarKey;
   n: Integer;
   spc, spc2, ret: string;
 begin
+  RemoveDummy;
   Result := '';
   if AIndent >= 0 then
   begin
@@ -386,12 +451,18 @@ begin
     spc2 := '';
     ret := ' ';
   end;
-  case FType of
+  case ValueType of
     XP_UNDEFINED, XP_NULL: Result := 'null';
-    XP_INTEGER: Result := IntToStr(AsInteger);
     XP_BOOLEAN: Result := IfThen(AsBoolean, 'true', 'false');
     XP_FLOAT: Result := FloatToStr(AsFloat);
+    XP_INTEGER: Result := IntToStr(AsInteger);
     XP_STRING: Result := '"' + EscapeString(AsString) + '"';
+    XP_POINTER: Result := IntToStr(Integer(AsPointer));
+    XP_KEY:
+    begin
+      vk := TXPVarKey(FInterface);
+      Result := vk.Key + ': ' + vk.Value.EncodeText(AIndent);
+    end;
     XP_ARRAY:
     begin
       arr := AsArray;
@@ -445,27 +516,33 @@ begin
 end;
 
 function XPVar.GetAsArray: TXPVarArray;
+var
+  ar: TXPVarArray;
 begin
-  if FType = XP_ARRAY then
-    if TXPVarArray(FInterface).FRefCount > 1 then
+  case ValueType of
+    XP_ARRAY:
     begin
-      Result := TXPVarArray.Create;
-      Result.Assign(TXPVarArray(FInterface));
-      FInterface := Result;
-    end
-    else Result := TXPVarArray(FInterface)
+      ar := TXPVarArray(FInterface);
+      if ar.FRef <> @Self then
+      begin
+        Result := TXPVarArray.Create;
+        Result.Assign(ar);
+        Result.FRef := @Result;
+        FInterface := Result;
+      end
+      else Result := ar;
+    end;
   else
-  begin
     Result := TXPVarArray.Create;
-    case FType of
+    case ValueType of
       XP_INTEGER: TXPVarArray(Result).Push(AsInteger);
       XP_BOOLEAN: TXPVarArray(Result).Push(AsBoolean);
       XP_FLOAT: TXPVarArray(Result).Push(AsFloat);
       XP_STRING: TXPVarArray(Result).Push(AsString);
       XP_KEY: TXPVarArray(Result).Push(AsKey);
+      XP_POINTER: TXPVarArray(Result).Push(AsPointer);
     end;
     FInterface := Result;
-    FType := XP_ARRAY;
   end;
 end;
 
@@ -473,7 +550,7 @@ function XPVar.GetAsBoolean: Boolean;
 var
   s: string;
 begin
-  case FType of
+  case ValueType of
     XP_INTEGER: Result := TXPVarInteger(FInterface).Value <> 0;
     XP_BOOLEAN: Result := TXPVarBoolean(FInterface).Value;
     XP_FLOAT: Result := TXPVarFloat(FInterface).Value <> 0.0;
@@ -483,6 +560,7 @@ begin
       Result := (s = 'TRUE') or (StrToFloatDef(s, 0.0) <> 0.0);
     end;
     XP_KEY: Result := TXPVarKey(FInterface).Value.AsBoolean;
+    XP_POINTER: Result := TXPVarPointer(FInterface).Value <> nil;
     XP_ARRAY: Result := False;
   else
     Result := False;
@@ -491,12 +569,13 @@ end;
 
 function XPVar.GetAsFloat: Double;
 begin
-  case FType of
+  case ValueType of
     XP_INTEGER: Result := TXPVarInteger(FInterface).Value;
     XP_BOOLEAN: Result := IfThen(TXPVarBoolean(FInterface).Value, 1.0, 0.0);
     XP_FLOAT: Result := TXPVarFloat(FInterface).Value;
     XP_STRING: Result := StrToFloatDef(TXPVarString(FInterface).Value, 0.0);
     XP_KEY: Result := TXPVarKey(FInterface).Value.AsFloat;
+    XP_POINTER: Result := Integer(TXPVarPointer(FInterface).Value);
     XP_ARRAY: Result := 0.0;
   else
     Result := 0.0;
@@ -505,12 +584,13 @@ end;
 
 function XPVar.GetAsInteger: Integer;
 begin
-  case FType of
+  case ValueType of
     XP_INTEGER: Result := TXPVarInteger(FInterface).Value;
     XP_BOOLEAN: Result := IfThen(TXPVarBoolean(FInterface).Value, 1, 0);
     XP_FLOAT: Result := Round(TXPVarFloat(FInterface).Value);
     XP_STRING: Result := StrToIntDef(TXPVarString(FInterface).Value, 0);
     XP_KEY: Result := TXPVarKey(FInterface).Value.AsInteger;
+    XP_POINTER: Result := Integer(TXPVarPointer(FInterface).Value);
     XP_ARRAY: Result := 0;
   else
     Result := 0;
@@ -519,31 +599,47 @@ end;
 
 function XPVar.GetAsKey: TXPVarKey;
 begin
-  if FType = XP_KEY then
+  if ValueType = XP_KEY then
     Result := TXPVarKey(FInterface)
   else
   begin
     Result := TXPVarKey.Create;
-    case FType of
-      XP_INTEGER: TXPVarKey(Result).Value := AsInteger;
-      XP_BOOLEAN: TXPVarKey(Result).Value := AsBoolean;
-      XP_FLOAT: TXPVarKey(Result).Value := AsFloat;
-      XP_STRING: TXPVarKey(Result).Value := AsString;
-      XP_ARRAY: TXPVarKey(Result).Value := AsArray;
+    case ValueType of
+      XP_INTEGER: TXPVarKey(Result).Value.AsInteger := AsInteger;
+      XP_BOOLEAN: TXPVarKey(Result).Value.AsBoolean := AsBoolean;
+      XP_FLOAT: TXPVarKey(Result).Value.AsFloat := AsFloat;
+      XP_STRING: TXPVarKey(Result).Value.AsString := AsString;
+      XP_POINTER: TXPVarKey(Result).Value.AsInteger := AsInteger;
+      XP_ARRAY: TXPVarKey(Result).Value.AsArray := AsArray;
     end;
     FInterface := Result;
-    FType := XP_KEY;
+  end;
+end;
+
+function XPVar.GetAsPointer: Pointer;
+begin
+  case ValueType of
+    XP_UNDEFINED, XP_NULL: Result := nil;
+    XP_INTEGER: Result := @TXPVarInteger(FInterface).Value;
+    XP_BOOLEAN: Result := @TXPVarBoolean(FInterface).Value;
+    XP_FLOAT: Result := @TXPVarFloat(FInterface).Value;
+    XP_STRING: Result := @TXPVarString(FInterface).Value;
+    XP_POINTER: Result := TXPVarPointer(FInterface).Value;
+    XP_KEY: Result := @TXPVarKey(FInterface).Value;
+  else
+    Result := FInterface;
   end;
 end;
 
 function XPVar.GetAsString: string;
 begin
-  case FType of
+  case ValueType of
     XP_INTEGER: Result := IntToStr(TXPVarInteger(FInterface).Value);
     XP_BOOLEAN: Result := IfThen(TXPVarBoolean(FInterface).Value, '1', '0');
     XP_FLOAT: Result := FloatToStr(TXPVarFloat(FInterface).Value);
     XP_STRING: Result := TXPVarString(FInterface).Value;
     XP_KEY: Result := TXPVarKey(FInterface).Value.AsString;
+    XP_POINTER: Result := IntToStr(Integer(TXPVarPointer(FInterface).Value));
     XP_ARRAY: Result := 'Array';
   else
     Result := '';
@@ -560,27 +656,47 @@ begin
   Result := EncodeText(0);
 end;
 
-function XPVar.GetValueOfBool(AKey: Boolean): XPVar;
+function XPVar.GetType: TXPVarType;
+begin
+  if FInterface is TXPVarNull then
+    Result := XP_NULL
+  else if FInterface is TXPVarInteger then
+    Result := XP_INTEGER
+  else if FInterface is TXPVarBoolean then
+    Result := XP_BOOLEAN
+  else if FInterface is TXPVarFloat then
+    Result := XP_FLOAT
+  else if FInterface is TXPVarArray then
+    Result := XP_ARRAY
+  else if FInterface is TXPVarKey then
+    Result := XP_KEY
+  else if FInterface is TXPVarString then
+    Result := XP_STRING
+  else if FInterface is TXPVarPointer then
+    Result := XP_POINTER
+  else Result := XP_UNDEFINED;
+end;
+
+function XPVar.GetValueOfBool(AKey: Boolean): XPVarRef;
 begin
   Result := GetValues(IfThen(AKey, '1', '0'));
 end;
 
-function XPVar.GetValueOfInt(AKey: Integer): XPVar;
+function XPVar.GetValueOfInt(AKey: Integer): XPVarRef;
 begin
   Result := GetValues(IntToStr(AKey));
 end;
 
-function XPVar.GetValues(AKey: string): XPVar;
+function XPVar.GetValues(AKey: string): XPVarRef;
 begin
-  if FType = XP_ARRAY then
-    Result := AsArray[AKey]
-  else raise Exception.Create('Can not get member on non ARRAY type.');
+  Result := AsArray[AKey];
 end;
 
 class operator XPVar.Implicit(AValue: Pointer): XPVar;
 begin
-  if (AValue <> nil) then raise Exception.Create('Can not assign pointer to XPVar');
-  Result.SetType(XP_NULL);
+  if (AValue <> nil) then
+    Result.AsPointer := AValue
+  else Result.SetType(XP_NULL);
 end;
 
 class operator XPVar.Implicit(AValue: Double): XPVar;
@@ -608,6 +724,11 @@ begin
   Result := AValue.AsString;
 end;
 
+class operator XPVar.Implicit(AValue: XPVarRef): XPVar;
+begin
+  Result := AValue.FVar.FRef^;
+end;
+
 class operator XPVar.Implicit(AValue: TXPVarKey): XPVar;
 begin
   Result.AsKey := AValue;
@@ -630,6 +751,16 @@ begin
   end;
 end;
 
+function XPVar.RemoveDummy: Boolean;
+begin
+  case ValueType of
+    XP_ARRAY: Result := AsArray.RemoveDummy;
+    XP_UNDEFINED: Result := True;
+  else
+    Result := False;
+  end;
+end;
+
 class operator XPVar.Implicit(AValue: TXPVarArray): XPVar;
 begin
   Result.Clear;
@@ -649,6 +780,18 @@ end;
 class operator XPVar.Implicit(AValue: XPVar): Boolean;
 begin
   Result := AValue.AsBoolean;
+end;
+
+class operator XPVar.Implicit(AValue: XPVar): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVar.Implicit(AValue: PXPVar): XPVar;
+begin
+  Result := AValue^;
 end;
 
 { TXPVarArray }
@@ -686,6 +829,7 @@ end;
 
 constructor TXPVarArray.Create;
 begin
+  FRef := nil;
   FItems := nil;
   FIndex := 0;
   FAssociated := False;
@@ -712,14 +856,30 @@ begin
   Result := FItems[AIndex].Key;
 end;
 
-function TXPVarArray.GetValues(AKey: string): XPVar;
+function TXPVarArray.GetValueRefs(AKey: string): PXPVar;
 var
+  v: XPVarItem;
   n: Integer;
 begin
   n := IndexOf(AKey);
-  if n >= 0 then
-    Result := FItems[n].Value
-  else Result := nil;
+  if n < 0 then
+  begin
+    n := Length(FItems);
+    v.Key := AKey;
+    v.Value.Clear;
+    Insert(v, FItems, n);
+    if IntToStr(FIndex) = AKey then
+      Inc(FIndex)
+    else FAssociated := True;
+  end;
+  Result := @FItems[n].Value;
+end;
+
+function TXPVarArray.GetValues(AKey: string): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FRef := ValueRefs[AKey];
+  Result.FVar.FValue := Result.FVar.FRef^;
 end;
 
 function TXPVarArray.IndexOf(AKey: string; AStart, AStop: Integer): Integer;
@@ -738,18 +898,41 @@ end;
 function TXPVarArray.Push(AValue: XPVar): Integer;
 var
   key: TXPVarKey;
+  v: XPVarRef;
 begin
-  if AValue.FType = XP_KEY then
+  if AValue.ValueType = XP_KEY then
   begin
     key := AValue.AsKey;
-    SetValues(key.Key, key.Value);
+    v.Value := @AValue;
+    SetValues(key.Key, v);
     Result := IndexOf(key.Key);
   end
   else
   begin
     Result := FIndex;
-    SetValues(IntToStr(Result), AValue);
+    v.Value := @AValue;
+    SetValues(IntToStr(Result), v);
   end;
+end;
+
+function TXPVarArray.RemoveDummy: Boolean;
+var
+//  v: PXPVar;
+  n: Integer;
+begin
+  Result := False;
+  n := Length(FItems);
+  while n > 0 do
+  begin
+    Dec(n);
+    if FItems[n].Value.RemoveDummy then
+    begin
+      if n < Length(FItems) - 1 then FAssociated := True;
+      Delete(FItems, n, 1);
+      Result := True;
+    end;
+  end;
+  Result := Result and (Length(FItems) = 0);
 end;
 
 procedure TXPVarArray.SetAssociated(AValue: Boolean);
@@ -757,24 +940,16 @@ begin
   FAssociated := AValue;
 end;
 
-procedure TXPVarArray.SetValues(AKey: string; AValue: XPVar);
+procedure TXPVarArray.SetValues(AKey: string; AValue: XPVarRef);
 var
-  v: XPVarItem;
-  n: Integer;
+  key: TXPVarKey;
 begin
-  n := IndexOf(AKey);
-  if n >= 0 then
-    FItems[n].Value := AValue
-  else
+  if AValue.FVar.FRef.ValueType = XP_KEY then
   begin
-    n := Length(FItems);
-    v.Key := AKey;
-    v.Value := AValue;
-    Insert(v, FItems, n);
-    if IntToStr(FIndex) = AKey then
-      Inc(FIndex)
-    else FAssociated := True;
-  end;
+    key := TXPVarKey(AValue.FVar.FRef.FInterface);
+    ValueRefs[key.Key]^ := key.Value;
+  end
+  else ValueRefs[AKey]^ := AValue.FVar.FRef^;
 end;
 
 { TXPVarString }
@@ -910,6 +1085,7 @@ function XPVarCodec.GetValue: XPVar;
 var
   arr: TXPVarArray;
   v: XPVar;
+  rv: XPVarRef;
   s: string;
   c: Char;
 begin
@@ -969,7 +1145,8 @@ begin
         if GetTrim <> ':' then raise Exception.Create('Invalid JSON object.');
         Inc(FPos);
         v := GetValue;
-        arr[s] := v;
+        rv.Ref := @v;
+        arr[s] := rv;
         c := GetTrim;
         if c = ',' then
         begin
@@ -1006,22 +1183,157 @@ begin
   Value.SetType(XP_UNDEFINED);
 end;
 
-constructor TXPVarKey.Create(AKey: string; AValue: XPVar);
+{ TXPVarPointer }
+
+constructor TXPVarPointer.Create(AValue: Pointer);
 begin
-  Key := AKey;
   Value := AValue;
 end;
 
-constructor TXPVarKey.Create(AKey: Boolean; AValue: XPVar);
+{ TXPVarRef }
+
+constructor TXPVarRef.Create;
 begin
-  Key := IfThen(AKey, '1', '0');
-  Value := AValue;
+  FValue.Clear;
+  FRef := @FValue;
 end;
 
-constructor TXPVarKey.Create(AKey: Integer; AValue: XPVar);
+{ XPVarRef }
+
+class operator XPVarRef.Add(A: XPVarRef; B: Double): XPVarRef;
 begin
-  Key := IntToStr(AKey);
-  Value := AValue;
+  Result.Clear;
+  Result.FVar.FValue := A.FVar.FRef^ + B;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+procedure XPVarRef.Clear;
+begin
+  FVar := TXPVarRef.Create;
+end;
+
+function XPVarRef.GetRef: PXPVar;
+begin
+  Result := FVar.FRef;
+end;
+
+function XPVarRef.GetValue: PXPVar;
+begin
+  Result := FVar.FRef;
+end;
+
+function XPVarRef.GetValueOfBool(AKey: Boolean): XPVarRef;
+begin
+  Result := GetValues(IfThen(AKey, '1', '0'));
+end;
+
+function XPVarRef.GetValueOfInt(AKey: Integer): XPVarRef;
+begin
+  Result := GetValues(IntToStr(AKey));
+end;
+
+function XPVarRef.GetValues(AKey: string): XPVarRef;
+begin
+  Result := FVar.FRef.AsArray[AKey];
+end;
+
+class operator XPVarRef.Implicit(AValue: Double): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Implicit(AValue: Integer): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Implicit(AValue: Boolean): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Implicit(AValue: string): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Implicit(AValue: Pointer): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Negative(AValue: XPVarRef): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := -AValue.FVar.FRef^;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Implicit(AValue: TXPVarArray): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Implicit(AValue: TXPVarKey): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := AValue;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+procedure XPVarRef.SetRef(AValue: PXPVar);
+begin
+  Clear;
+  FVar.FRef := AValue;
+  FVar.FValue := AValue^;
+end;
+
+procedure XPVarRef.SetValue(AValue: PXPVar);
+begin
+  Clear;
+  FVar.FValue := AValue^;
+  FVar.FRef := @FVar.FValue;
+end;
+
+procedure XPVarRef.SetValueOfBool(AKey: Boolean; AValue: XPVarRef);
+begin
+  SetValues(IfThen(AKey, '1', '0'), AValue);
+end;
+
+procedure XPVarRef.SetValueOfInt(AKey: Integer; AValue: XPVarRef);
+begin
+  SetValues(IntToStr(AKey), AValue);
+end;
+
+procedure XPVarRef.SetValues(AKey: string; AValue: XPVarRef);
+begin
+  FVar.FRef.AsArray[AKey] := AValue;
+end;
+
+class operator XPVarRef.Subtract(A: XPVarRef; B: Double): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := A.FVar.FRef^ - B;
+  Result.FVar.FRef := @Result.FVar.FValue;
+end;
+
+class operator XPVarRef.Subtract(A: Double; B: XPVarRef): XPVarRef;
+begin
+  Result.Clear;
+  Result.FVar.FValue := A - B.FVar.FRef^;
+  Result.FVar.FRef := @Result.FVar.FValue;
 end;
 
 end.
