@@ -69,6 +69,9 @@ type
     procedure SetValue(AValue: PXPVar);
     function GetRef: PXPVar;
     procedure SetRef(AValue: PXPVar);
+    function GetJSON: string;
+    procedure SetJSON(AValue: string);
+    function GetJSONPretty: string;
   public
     procedure Clear;
 
@@ -85,6 +88,11 @@ type
     class operator Add(A: XPVarRef; B: Double): XPVarRef;
     class operator Subtract(A: XPVarRef; B: Double): XPVarRef;
     class operator Subtract(A: Double; B: XPVarRef): XPVarRef;
+
+    property JSON: string read GetJSON write SetJSON;
+    property JSONPretty: string read GetJSONPretty write SetJSON;
+    property Text: string read GetJSON write SetJSON;
+    property TextPretty: string read GetJSONPretty write SetJSON;
 
     property Ref: PXPVar read GetRef write SetRef;
     property Value: PXPVar read GetValue write SetValue;
@@ -421,8 +429,9 @@ end;
 
 class operator XPVar.Add(A: XPVar; B: XPVarRef): XPVarRef;
 begin
-  Result.FVar.FValue := A + B.FVar.FValue;
+  Result.Clear;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := A + B.FVar.FValue;
 end;
 
 procedure XPVar.Clear;
@@ -527,7 +536,7 @@ begin
       begin
         Result := TXPVarArray.Create;
         Result.Assign(ar);
-        Result.FRef := @Result;
+        Result.FRef := @Self;
         FInterface := Result;
       end
       else Result := ar;
@@ -725,8 +734,20 @@ begin
 end;
 
 class operator XPVar.Implicit(AValue: XPVarRef): XPVar;
+var
+  ar: TXPVarArray;
 begin
-  Result := AValue.FVar.FRef^;
+  case AValue.FVar.FRef.ValueType of
+    XP_ARRAY:
+    begin
+      ar := TXPVarArray.Create;
+      ar.Assign(TXPVarArray(AValue.FVar.FRef.FInterface));
+      ar.FRef := @Result;
+      Result.FInterface := ar;
+    end
+  else
+    Result := AValue.FVar.FRef^;
+  end;
 end;
 
 class operator XPVar.Implicit(AValue: TXPVarKey): XPVar;
@@ -785,8 +806,8 @@ end;
 class operator XPVar.Implicit(AValue: XPVar): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
 end;
 
 class operator XPVar.Implicit(AValue: PXPVar): XPVar;
@@ -943,13 +964,26 @@ end;
 procedure TXPVarArray.SetValues(AKey: string; AValue: XPVarRef);
 var
   key: TXPVarKey;
+  ar: TXPVarArray;
+  v: PXPVar;
 begin
-  if AValue.FVar.FRef.ValueType = XP_KEY then
-  begin
-    key := TXPVarKey(AValue.FVar.FRef.FInterface);
-    ValueRefs[key.Key]^ := key.Value;
-  end
-  else ValueRefs[AKey]^ := AValue.FVar.FRef^;
+  case AValue.FVar.FRef.ValueType of
+    XP_KEY:
+    begin
+      key := TXPVarKey(AValue.FVar.FRef.FInterface);
+      ValueRefs[key.Key]^ := key.Value;
+    end;
+    XP_ARRAY:
+    begin
+      v := ValueRefs[AKey];
+      ar := TXPVarArray.Create;
+      ar.Assign(TXPVarArray(AValue.FVar.FRef.FInterface));
+      ar.FRef := v;
+      v.FInterface := ar;
+    end
+  else
+    ValueRefs[AKey]^ := AValue.FVar.FRef^;
+  end;
 end;
 
 { TXPVarString }
@@ -1203,13 +1237,23 @@ end;
 class operator XPVarRef.Add(A: XPVarRef; B: Double): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := A.FVar.FRef^ + B;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := A.FVar.FRef^ + B;
 end;
 
 procedure XPVarRef.Clear;
 begin
   FVar := TXPVarRef.Create;
+end;
+
+function XPVarRef.GetJSON: string;
+begin
+  Result := FVar.FRef.GetJSON;
+end;
+
+function XPVarRef.GetJSONPretty: string;
+begin
+  Result := FVar.FRef.GetJSONPretty;
 end;
 
 function XPVarRef.GetRef: PXPVar;
@@ -1240,57 +1284,62 @@ end;
 class operator XPVarRef.Implicit(AValue: Double): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
 end;
 
 class operator XPVarRef.Implicit(AValue: Integer): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
 end;
 
 class operator XPVarRef.Implicit(AValue: Boolean): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
 end;
 
 class operator XPVarRef.Implicit(AValue: string): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
 end;
 
 class operator XPVarRef.Implicit(AValue: Pointer): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
 end;
 
 class operator XPVarRef.Negative(AValue: XPVarRef): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := -AValue.FVar.FRef^;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := -AValue.FVar.FRef^;
 end;
 
 class operator XPVarRef.Implicit(AValue: TXPVarArray): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
 end;
 
 class operator XPVarRef.Implicit(AValue: TXPVarKey): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := AValue;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := AValue;
+end;
+
+procedure XPVarRef.SetJSON(AValue: string);
+begin
+  FVar.FRef.SetJSON(AValue);
 end;
 
 procedure XPVarRef.SetRef(AValue: PXPVar);
@@ -1303,8 +1352,8 @@ end;
 procedure XPVarRef.SetValue(AValue: PXPVar);
 begin
   Clear;
-  FVar.FValue := AValue^;
   FVar.FRef := @FVar.FValue;
+  FVar.FValue := AValue^;
 end;
 
 procedure XPVarRef.SetValueOfBool(AKey: Boolean; AValue: XPVarRef);
@@ -1325,15 +1374,15 @@ end;
 class operator XPVarRef.Subtract(A: XPVarRef; B: Double): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := A.FVar.FRef^ - B;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := A.FVar.FRef^ - B;
 end;
 
 class operator XPVarRef.Subtract(A: Double; B: XPVarRef): XPVarRef;
 begin
   Result.Clear;
-  Result.FVar.FValue := A - B.FVar.FRef^;
   Result.FVar.FRef := @Result.FVar.FValue;
+  Result.FVar.FValue := A - B.FVar.FRef^;
 end;
 
 end.
